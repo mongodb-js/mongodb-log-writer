@@ -168,6 +168,9 @@ export class MongoLogWriter extends Writable {
 
   /** Wait until all pending data has been written to the underlying stream. */
   async flush(): Promise<void> {
+    if (typeof this._target.flush === 'function') {
+      this._target.flush();
+    }
     await new Promise(resolve => this._target.write('', resolve));
   }
 
