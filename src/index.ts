@@ -7,6 +7,8 @@ import { inspect } from 'util';
 import { createGzip } from 'zlib';
 import v8 from 'v8';
 
+type PlainWritable = Pick<Writable, 'write' | 'end'> & { flush?: () => void };
+
 /**
  * A unique correlation ID for log lines. Always create these
  * using {@link mongoLogId()}, never directly.
@@ -73,7 +75,7 @@ function validateLogEntry(info: MongoLogEntry): Error | null {
 export class MongoLogWriter extends Writable {
   _logId: string;
   _logFilePath: string | null;
-  _target: Pick<Writable, 'write' | 'end'>;
+  _target: PlainWritable;
   _now: () => Date;
 
   /**
@@ -82,7 +84,7 @@ export class MongoLogWriter extends Writable {
    * @param target The Writable stream to write data to.
    * @param now An optional function that overrides computation of the current time. This is used for testing.
    */
-  constructor(logId: string, logFilePath: string | null, target: Pick<Writable, 'write' | 'end'>, now?: () => Date) {
+  constructor(logId: string, logFilePath: string | null, target: PlainWritable, now?: () => Date) {
     super({ objectMode: true });
     this._logId = logId;
     this._logFilePath = logFilePath;
@@ -101,7 +103,7 @@ export class MongoLogWriter extends Writable {
   }
 
   /** Return the target stream that was used to create this MongoLogWriter instance. */
-  get target(): Pick<Writable, 'write' | 'end'> {
+  get target(): PlainWritable {
     return this._target;
   }
 
@@ -155,6 +157,9 @@ export class MongoLogWriter extends Writable {
       }
     }
     this._target.write(EJSON.stringify(fullInfo, { relaxed: true }) + '\n', callback);
+    if (typeof this._target.flush === 'function') {
+      this._target.flush();
+    }
   }
 
   _final(callback: (err?: Error | null | undefined) => void): void {
