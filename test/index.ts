@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 import stream from 'stream';
-import { gunzip } from 'zlib';
+import { gunzip, constants as zlibConstants } from 'zlib';
 import { promisify, inspect } from 'util';
 import sinon from 'ts-sinon';
 import chai, { expect } from 'chai';
@@ -235,6 +235,25 @@ describe('MongoLogManager', () => {
     await once(writer, 'finish');
 
     const log = (await promisify(gunzip)(await fs.readFile(writer.logFilePath as string)))
+      .toString()
+      .split('\n')
+      .filter(Boolean)
+      .map((line: string) => JSON.parse(line));
+    expect(log).to.have.lengthOf(1);
+    expect(log[0].t.$date).to.be.a('string');
+  });
+
+  it('optionally can read truncated gzip’ed log files', async() => {
+    const manager = new MongoLogManager({
+      directory, retentionDays, onwarn, onerror, gzip: true
+    });
+
+    const writer = await manager.createLogWriter();
+    expect(writer.logFilePath as string).to.match(/\.gz$/);
+    writer.info('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
+    await writer.flush();
+
+    const log = (await promisify(gunzip)(await fs.readFile(writer.logFilePath as string), { finishFlush: zlibConstants.Z_SYNC_FLUSH }))
       .toString()
       .split('\n')
       .filter(Boolean)

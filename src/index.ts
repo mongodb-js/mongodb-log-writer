@@ -4,10 +4,10 @@ import { createWriteStream, promises as fs } from 'fs';
 import path from 'path';
 import { Writable } from 'stream';
 import { inspect } from 'util';
-import { createGzip } from 'zlib';
+import { createGzip, constants as zlibConstants } from 'zlib';
 import v8 from 'v8';
 
-type PlainWritable = Pick<Writable, 'write' | 'end'> & { flush?: () => void };
+type PlainWritable = Pick<Writable, 'write' | 'end'>;
 
 /**
  * A unique correlation ID for log lines. Always create these
@@ -157,9 +157,6 @@ export class MongoLogWriter extends Writable {
       }
     }
     this._target.write(EJSON.stringify(fullInfo, { relaxed: true }) + '\n', callback);
-    if (typeof this._target.flush === 'function') {
-      this._target.flush();
-    }
   }
 
   _final(callback: (err?: Error | null | undefined) => void): void {
@@ -168,9 +165,6 @@ export class MongoLogWriter extends Writable {
 
   /** Wait until all pending data has been written to the underlying stream. */
   async flush(): Promise<void> {
-    if (typeof this._target.flush === 'function') {
-      this._target.flush();
-    }
     await new Promise(resolve => this._target.write('', resolve));
   }
 
@@ -319,7 +313,7 @@ export class MongoLogManager {
       await once(stream, 'ready');
       if (doGzip) {
         const originalTarget = stream;
-        stream = createGzip();
+        stream = createGzip({ flush: zlibConstants.Z_SYNC_FLUSH });
         stream.pipe(originalTarget);
       }
     } catch (err: any) {
