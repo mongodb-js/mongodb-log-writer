@@ -260,5 +260,9 @@ describe('MongoLogManager', () => {
       .map((line: string) => JSON.parse(line));
     expect(log).to.have.lengthOf(1);
     expect(log[0].t.$date).to.be.a('string');
+
+    // Still clean up here because Windows doesn’t like open files:
+    writer.end();
+    await once(writer, 'finish');
   });
 });
