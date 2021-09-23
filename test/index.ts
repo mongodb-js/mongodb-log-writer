@@ -1,4 +1,5 @@
-import { MongoLogWriter, MongoLogManager, mongoLogId } from '../';
+import { MongoLogWriter, MongoLogManager, MongoLogEntry, mongoLogId } from '../';
+import { EJSON } from 'bson';
 import { once } from 'events';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -16,6 +17,8 @@ describe('MongoLogWriter', () => {
     const now = new Date(1628591965386);
     const target = new stream.PassThrough().setEncoding('utf8');
     const writer = new MongoLogWriter('logid', null, target, () => now);
+    const logEvents: MongoLogEntry[] = [];
+    writer.on('log', entry => logEvents.push(entry));
     expect(writer.target).to.equal(target);
     writer.info('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
     writer.warn('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
@@ -34,6 +37,7 @@ describe('MongoLogWriter', () => {
       .split('\n')
       .filter(Boolean)
       .map((line: string) => JSON.parse(line));
+    expect(log).to.deep.equal(EJSON.serialize(logEvents));
     expect(log).to.deep.equal([
       {
         t: { $date: '2021-08-10T10:39:25.386Z' },

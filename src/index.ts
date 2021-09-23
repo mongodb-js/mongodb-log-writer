@@ -123,6 +123,8 @@ export class MongoLogWriter extends Writable {
       ctx: info.ctx,
       msg: info.msg
     };
+    this.emit('log', fullInfo);
+
     if (info.attr) {
       if (Object.prototype.toString.call(info.attr) === '[object Error]') {
         fullInfo.attr = {
