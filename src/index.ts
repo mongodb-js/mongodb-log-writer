@@ -123,7 +123,6 @@ export class MongoLogWriter extends Writable {
       ctx: info.ctx,
       msg: info.msg
     };
-    this.emit('log', fullInfo);
 
     if (info.attr) {
       if (Object.prototype.toString.call(info.attr) === '[object Error]') {
@@ -138,6 +137,8 @@ export class MongoLogWriter extends Writable {
         fullInfo.attr = info.attr;
       }
     }
+    
+    this.emit('log', fullInfo);
 
     // The attr field may contain arbitrary data. If we cannot serialize it,
     // we fall back to increasingly less faithful representations of it.
