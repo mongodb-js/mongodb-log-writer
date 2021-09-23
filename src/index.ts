@@ -234,6 +234,7 @@ export class MongoLogWriter extends Writable {
   bindComponent(component: string): {
     unbound: MongoLogWriter;
     component: string;
+    write(entry: Omit<MongoLogEntry, 'c'>, cb?: (error?: Error | null) => void): boolean;
     info(id: MongoLogId, context: string, message: string, attr?: unknown): void;
     warn(id: MongoLogId, context: string, message: string, attr?: unknown): void;
     error(id: MongoLogId, context: string, message: string, attr?: unknown): void;
@@ -242,6 +243,7 @@ export class MongoLogWriter extends Writable {
     return {
       unbound: this,
       component: component,
+      write: (entry, cb) => this.write({ c: component, ...entry }, cb),
       info: this.info.bind(this, component),
       warn: this.warn.bind(this, component),
       error: this.error.bind(this, component),
