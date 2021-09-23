@@ -314,7 +314,7 @@ export class MongoLogManager {
       if (doGzip) {
         const originalTarget = stream;
         stream = createGzip({
-          flush: zlibConstants.Z_SYNC_FLUSH, 
+          flush: zlibConstants.Z_SYNC_FLUSH,
           level: zlibConstants.Z_MAX_LEVEL
         });
         stream.pipe(originalTarget);
