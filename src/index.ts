@@ -137,7 +137,7 @@ export class MongoLogWriter extends Writable {
         fullInfo.attr = info.attr;
       }
     }
-    
+
     this.emit('log', fullInfo);
 
     // The attr field may contain arbitrary data. If we cannot serialize it,
