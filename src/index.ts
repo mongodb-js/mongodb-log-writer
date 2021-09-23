@@ -313,7 +313,10 @@ export class MongoLogManager {
       await once(stream, 'ready');
       if (doGzip) {
         const originalTarget = stream;
-        stream = createGzip({ flush: zlibConstants.Z_SYNC_FLUSH });
+        stream = createGzip({
+          flush: zlibConstants.Z_SYNC_FLUSH,
+          level: zlibConstants.Z_MAX_LEVEL
+        });
         stream.pipe(originalTarget);
       }
     } catch (err: any) {
