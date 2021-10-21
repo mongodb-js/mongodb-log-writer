@@ -236,7 +236,7 @@ describe('MongoLogManager', () => {
     expect(writer.logFilePath as string).to.match(/\.gz$/);
     writer.info('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
     writer.end();
-    await once(writer, 'finish');
+    await once(writer, 'log-finish');
 
     const log = (await promisify(gunzip)(await fs.readFile(writer.logFilePath as string)))
       .toString()
