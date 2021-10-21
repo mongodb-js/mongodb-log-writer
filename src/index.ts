@@ -312,17 +312,21 @@ export class MongoLogManager {
     const doGzip = !!this._options.gzip;
     const logFilePath = path.join(this._options.directory, `${logId}_log${doGzip ? '.gz' : ''}`);
 
+    let originalTarget: Writable;
     let stream: Writable;
+    let logWriter: MongoLogWriter | undefined;
     try {
       stream = createWriteStream(logFilePath, { mode: 0o600 });
+      originalTarget = stream;
       await once(stream, 'ready');
       if (doGzip) {
-        const originalTarget = stream;
         stream = createGzip({
           flush: zlibConstants.Z_SYNC_FLUSH,
           level: zlibConstants.Z_MAX_LEVEL
         });
         stream.pipe(originalTarget);
+      } else {
+        stream.on('finish', () => stream.emit('log-finish'));
       }
     } catch (err: any) {
       this._options.onwarn(err, logFilePath);
@@ -332,8 +336,17 @@ export class MongoLogManager {
           cb();
         }
       });
-      return new MongoLogWriter(logId, null, stream);
+      originalTarget = stream;
+      logWriter = new MongoLogWriter(logId, null, stream);
     }
-    return new MongoLogWriter(logId, logFilePath, stream);
+    if (!logWriter) {
+      logWriter = new MongoLogWriter(logId, logFilePath, stream);
+    }
+
+    // We use 'log-finish' to give consumers an event that they can
+    // listen on which is always only emitted once data has actually
+    // been written to disk.
+    originalTarget.on('finish', () => logWriter?.emit('log-finish'));
+    return logWriter;
   }
 }
