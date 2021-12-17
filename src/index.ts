@@ -253,6 +253,8 @@ export class MongoLogWriter extends Writable {
       fatal: this.fatal.bind(this, component)
     };
   }
+
+  mongoLogId = mongoLogId;
 }
 
 /** Options used by MongoLogManager instances. */
