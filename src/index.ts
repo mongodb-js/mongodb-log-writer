@@ -5,7 +5,6 @@ import path from 'path';
 import { Writable } from 'stream';
 import { inspect } from 'util';
 import { createGzip, constants as zlibConstants } from 'zlib';
-import v8 from 'v8';
 
 type PlainWritable = Pick<Writable, 'write' | 'end'>;
 
@@ -146,6 +145,10 @@ export class MongoLogWriter extends Writable {
       EJSON.stringify(fullInfo.attr);
     } catch {
       try {
+        // This package may be running in a web environment
+        // where v8 is not available.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const v8 = require('v8');
         const cloned = v8.deserialize(v8.serialize(fullInfo.attr));
         EJSON.stringify(cloned);
         fullInfo.attr = cloned;
