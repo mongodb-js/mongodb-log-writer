@@ -76,6 +76,10 @@ export class MongoLogWriter extends Writable {
   _logFilePath: string | null;
   _target: PlainWritable;
   _now: () => Date;
+  _v8?: {
+    serialize: (value: any) => Buffer;
+    deserialize: (buffer: NodeJS.TypedArray) => any;
+  };
 
   /**
    * @param logId A unique identifier for this log file. This is not used outside the `logId` getter.
@@ -89,6 +93,12 @@ export class MongoLogWriter extends Writable {
     this._logFilePath = logFilePath;
     this._target = target;
     this._now = now ?? (() => new Date());
+    try {
+      this._v8 = require('v8');
+    } catch {
+      // This package may be running in a web environment
+      // where v8 is not available.
+    }
   }
 
   /** Return the logId passed to the constructor. */
@@ -147,9 +157,10 @@ export class MongoLogWriter extends Writable {
       try {
         // This package may be running in a web environment
         // where v8 is not available.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const v8 = require('v8');
-        const cloned = v8.deserialize(v8.serialize(fullInfo.attr));
+        if (!this._v8) {
+          throw new Error('v8 not available');
+        }
+        const cloned = this._v8.deserialize(this._v8.serialize(fullInfo.attr));
         EJSON.stringify(cloned);
         fullInfo.attr = cloned;
       } catch {
