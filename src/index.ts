@@ -300,7 +300,10 @@ export class MongoLogManager {
       const { id } = dirent.name.match(/^(?<id>[a-f0-9]{24})_log(\.gz)?$/i)?.groups ?? {};
       if (!id) continue;
       // Delete files older than n days
-      if (new ObjectId(id).generationTime < (Date.now() / 1000) - this._options.retentionDays * 86400) {
+      if (
+        +new ObjectId(id).getTimestamp() / 1000 <
+        (Date.now() / 1000) - this._options.retentionDays * 86400
+      ) {
         const toUnlink = path.join(dir, dirent.name);
         try {
           await fs.unlink(toUnlink);
