@@ -22,7 +22,10 @@ export function mongoLogId(id: number): MongoLogId {
   return { __value: id };
 }
 
-/** An unformatted MongoDB log entry. */
+/**
+ * An unformatted MongoDB log entry.
+ * @see {@link https://www.mongodb.com/docs/manual/reference/log-messages/#structured-logging}
+ */
 export interface MongoLogEntry {
   /** Timestamp at which the log event occurred */
   t?: Date;
@@ -225,6 +228,28 @@ export class MongoLogWriter extends Writable {
   fatal(component: string, id: MongoLogId, context: string, message: string, attr?: unknown): void {
     const logEntry: MongoLogEntry = {
       s: 'F',
+      c: component,
+      id: id,
+      ctx: context,
+      msg: message,
+      attr: attr
+    };
+    this.write(logEntry);
+  }
+
+  /**
+   * Write a log entry with severity 'D'.
+   */
+  debug(
+    component: string,
+    id: MongoLogId,
+    context: string,
+    message: string,
+    attr?: unknown,
+    level: 1 | 2 | 3 | 4 | 5 = 1
+  ): void {
+    const logEntry: MongoLogEntry = {
+      s: `D${level}`,
       c: component,
       id: id,
       ctx: context,
