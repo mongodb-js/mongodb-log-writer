@@ -24,6 +24,7 @@ describe('MongoLogWriter', () => {
     writer.warn('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
     writer.error('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
     writer.fatal('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
+    writer.debug('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' }, 2);
     writer.write({
       t: now,
       s: 'E',
@@ -69,6 +70,15 @@ describe('MongoLogWriter', () => {
       {
         t: { $date: '2021-08-10T10:39:25.386Z' },
         s: 'F',
+        c: 'component',
+        id: 12345,
+        ctx: 'context',
+        msg: 'message',
+        attr: { foo: 'bar' }
+      },
+      {
+        t: { $date: '2021-08-10T10:39:25.386Z' },
+        s: 'D2',
         c: 'component',
         id: 12345,
         ctx: 'context',
