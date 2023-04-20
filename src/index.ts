@@ -265,11 +265,41 @@ export class MongoLogWriter extends Writable {
   bindComponent(component: string): {
     unbound: MongoLogWriter;
     component: string;
-    write(entry: Omit<MongoLogEntry, 'c'>, cb?: (error?: Error | null) => void): boolean;
-    info(id: MongoLogId, context: string, message: string, attr?: unknown): void;
-    warn(id: MongoLogId, context: string, message: string, attr?: unknown): void;
-    error(id: MongoLogId, context: string, message: string, attr?: unknown): void;
-    fatal(id: MongoLogId, context: string, message: string, attr?: unknown): void;
+    write(
+      entry: Omit<MongoLogEntry, 'c'>,
+      cb?: (error?: Error | null) => void
+    ): boolean;
+    info(
+      id: MongoLogId,
+      context: string,
+      message: string,
+      attr?: unknown
+    ): void;
+    warn(
+      id: MongoLogId,
+      context: string,
+      message: string,
+      attr?: unknown
+    ): void;
+    error(
+      id: MongoLogId,
+      context: string,
+      message: string,
+      attr?: unknown
+    ): void;
+    fatal(
+      id: MongoLogId,
+      context: string,
+      message: string,
+      attr?: unknown
+    ): void;
+    debug(
+      id: MongoLogId,
+      context: string,
+      message: string,
+      attr?: unknown,
+      level?: 1 | 2 | 3 | 4 | 5
+    ): void;
   } {
     return {
       unbound: this,
@@ -278,7 +308,8 @@ export class MongoLogWriter extends Writable {
       info: this.info.bind(this, component),
       warn: this.warn.bind(this, component),
       error: this.error.bind(this, component),
-      fatal: this.fatal.bind(this, component)
+      fatal: this.fatal.bind(this, component),
+      debug: this.debug.bind(this, component)
     };
   }
 
