@@ -1,5 +1,5 @@
 import { MongoLogWriter, MongoLogManager, MongoLogEntry, mongoLogId } from '../';
-import { EJSON } from 'bson';
+import { EJSON, ObjectId } from 'bson';
 import { once } from 'events';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -221,21 +221,19 @@ describe('MongoLogManager', () => {
     });
 
     const paths: string[] = [];
+    const offset = Math.floor(Date.now() / 1000);
     for (let i = 0; i < 10; i++) {
-      const writer = await manager.createLogWriter();
-      writer.info('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
-      writer.end();
-      await once(writer, 'finish');
-
-      paths.push(writer.logFilePath as string);
+      const filename = path.join(directory, ObjectId.createFromTime(offset - i).toHexString() + '_log');
+      await fs.writeFile(filename, '');
+      paths.unshift(filename);
     }
 
-    const countFiles = async() => {
-      return (await Promise.all(paths.map(path => fs.stat(path).then(() => 1, () => 0)))).reduce((a, b) => a + b, 0);
+    const getFiles = async() => {
+      return (await Promise.all(paths.map(path => fs.stat(path).then(() => 1, () => 0)))).join('');
     };
-    expect(await countFiles()).to.equal(10);
+    expect(await getFiles()).to.equal('1111111111');
     await manager.cleanupOldLogfiles();
-    expect(await countFiles()).to.equal(5);
+    expect(await getFiles()).to.equal('0000011111');
   });
 
   it('cleaning up old log files is a no-op by default', async() => {
