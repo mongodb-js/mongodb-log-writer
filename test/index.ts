@@ -215,6 +215,29 @@ describe('MongoLogManager', () => {
     }
   });
 
+  it('cleans up least recent log files when requested', async() => {
+    const manager = new MongoLogManager({
+      directory, retentionDays, maxLogFileCount: 5, onwarn, onerror
+    });
+
+    const paths: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const writer = await manager.createLogWriter();
+      writer.info('component', mongoLogId(12345), 'context', 'message', { foo: 'bar' });
+      writer.end();
+      await once(writer, 'finish');
+
+      paths.push(writer.logFilePath as string);
+    }
+
+    const countFiles = async() => {
+      return (await Promise.all(paths.map(path => fs.stat(path).then(() => 1, () => 0)))).reduce((a, b) => a + b, 0);
+    };
+    expect(await countFiles()).to.equal(10);
+    await manager.cleanupOldLogfiles();
+    expect(await countFiles()).to.equal(5);
+  });
+
   it('cleaning up old log files is a no-op by default', async() => {
     const manager = new MongoLogManager({
       directory: path.join('directory', 'nonexistent'), retentionDays, onwarn, onerror

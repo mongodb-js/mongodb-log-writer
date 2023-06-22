@@ -5,6 +5,7 @@ import path from 'path';
 import { Writable } from 'stream';
 import { inspect } from 'util';
 import { createGzip, constants as zlibConstants } from 'zlib';
+import { Heap } from 'heap-js';
 
 type PlainWritable = Pick<Writable, 'write' | 'end'>;
 
@@ -324,6 +325,8 @@ interface MongoLogOptions {
   gzip?: boolean;
   /** The number of calendar days after which old log files are deleted. */
   retentionDays: number;
+  /** The maximal number of log files which are kept. */
+  maxLogFileCount?: number;
   /** A handler for warnings related to a specific filesystem path. */
   onerror: (err: Error, path: string) => unknown | Promise<void>;
   /** A handler for errors related to a specific filesystem path. */
@@ -343,7 +346,7 @@ export class MongoLogManager {
   }
 
   /** Clean up log files older than `retentionDays`. */
-  async cleanupOldLogfiles(): Promise<void> {
+  async cleanupOldLogfiles(maxDurationMs = 5_000): Promise<void> {
     const dir = this._options.directory;
     let dirHandle;
     try {
@@ -351,20 +354,48 @@ export class MongoLogManager {
     } catch {
       return;
     }
+
+    const deletionStartTimestamp = Date.now();
+    // Delete files older than N days
+    const deletionCutoffTimestamp = deletionStartTimestamp - this._options.retentionDays * 86400 * 1000;
+    // Store the known set of least recent files in a heap in order to be able to
+    // delete all but the most recent N files.
+    const leastRecentFileHeap = new Heap<{
+      fileTimestamp: number, fullPath: string
+    }>((a, b) => a.fileTimestamp - b.fileTimestamp);
+
     for await (const dirent of dirHandle) {
+      // Cap the overall time spent inside this function. Consider situations like
+      // a large number of machines using a shared network-mounted $HOME directory
+      // where lots and lots of log files end up and filesystem operations happen
+      // with network latency.
+      if (Date.now() - deletionStartTimestamp > maxDurationMs) break;
+
       if (!dirent.isFile()) continue;
       const { id } = dirent.name.match(/^(?<id>[a-f0-9]{24})_log(\.gz)?$/i)?.groups ?? {};
       if (!id) continue;
-      // Delete files older than n days
-      if (
-        +new ObjectId(id).getTimestamp() / 1000 <
-        (Date.now() / 1000) - this._options.retentionDays * 86400
-      ) {
-        const toUnlink = path.join(dir, dirent.name);
-        try {
-          await fs.unlink(toUnlink);
-        } catch (err: any) {
-          this._options.onerror(err, toUnlink);
+      const fileTimestamp = +new ObjectId(id).getTimestamp();
+      const fullPath = path.join(dir, dirent.name);
+      let toDelete: string | undefined;
+
+      // If the file is older than expected, delete it. If the file is recent,
+      // add it to the list of seen files, and if that list is too large, remove
+      // the least recent file we've seen so far.
+      if (fileTimestamp < deletionCutoffTimestamp) {
+        toDelete = fullPath;
+      } else if (this._options.maxLogFileCount) {
+        leastRecentFileHeap.push({ fullPath, fileTimestamp });
+        if (leastRecentFileHeap.size() > this._options.maxLogFileCount) {
+          toDelete = leastRecentFileHeap.pop()?.fullPath;
+        }
+      }
+
+      if (!toDelete) continue;
+      try {
+        await fs.unlink(toDelete);
+      } catch (err: any) {
+        if (err?.code !== 'ENOENT') {
+          this._options.onerror(err, fullPath);
         }
       }
     }
