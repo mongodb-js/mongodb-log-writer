@@ -1,5 +1,5 @@
 import { MongoLogWriter, MongoLogManager, MongoLogEntry, mongoLogId } from '../';
-import { EJSON } from 'bson';
+import { EJSON, ObjectId } from 'bson';
 import { once } from 'events';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -213,6 +213,27 @@ describe('MongoLogManager', () => {
     } catch (err: any) {
       expect(err.code).to.equal('ENOENT');
     }
+  });
+
+  it('cleans up least recent log files when requested', async() => {
+    const manager = new MongoLogManager({
+      directory, retentionDays, maxLogFileCount: 5, onwarn, onerror
+    });
+
+    const paths: string[] = [];
+    const offset = Math.floor(Date.now() / 1000);
+    for (let i = 0; i < 10; i++) {
+      const filename = path.join(directory, ObjectId.createFromTime(offset - i).toHexString() + '_log');
+      await fs.writeFile(filename, '');
+      paths.unshift(filename);
+    }
+
+    const getFiles = async() => {
+      return (await Promise.all(paths.map(path => fs.stat(path).then(() => 1, () => 0)))).join('');
+    };
+    expect(await getFiles()).to.equal('1111111111');
+    await manager.cleanupOldLogfiles();
+    expect(await getFiles()).to.equal('0000011111');
   });
 
   it('cleaning up old log files is a no-op by default', async() => {
