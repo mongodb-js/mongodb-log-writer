@@ -1,6 +1,6 @@
 {
   "name": "mongodb-log-writer",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A library for writing MongoDB logv2 messages",
   "keywords": [
     "mongodb",
