@@ -1,3 +1,6 @@
+> [!WARNING] 
+> **mongodb-log-writer** is now being maintained in the [devtools-shared](https://github.com/mongodb-js/devtools-shared/) repository. Please check there for updates.
+
 # mongodb-log-writer
 
 A library for writing MongoDB logv2 messages.
