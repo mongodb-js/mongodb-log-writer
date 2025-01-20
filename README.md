@@ -1,5 +1,5 @@
 > [!WARNING] 
-> **mongodb-log-writer** has been changed to **[@mongodb-js/mongodb-log-writer](https://www.npmjs.com/package/@mongodb-js/mongodb-log-writer)** and is now being maintained in the [devtools-shared](https://github.com/mongodb-js/devtools-shared/) repository. Please check there for updates.
+> **mongodb-log-writer** is now being maintained in the [devtools-shared](https://github.com/mongodb-js/devtools-shared/) repository. Please check there for updates.
 
 # mongodb-log-writer
 
